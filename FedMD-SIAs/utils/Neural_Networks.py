@@ -7,6 +7,7 @@ import functools
 import operator
 from torch.utils.data import TensorDataset, DataLoader,Dataset
 from .utility import RunningAverage,set_logger
+import torch.nn.init as init
 
 from torch.optim import SGD, Adam
 import os

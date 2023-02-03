@@ -103,9 +103,9 @@ def load_CIFAR_data(data_type="CIFAR10", label_mode="fine",
                     ])
     if data_type == "CIFAR10":
         trainset = torchvision.datasets.CIFAR10(root='./data/cifar10', train=True,
-                                                download=True, transforms = train_transform)
+                                                download=True, transform = train_transform)
         devset = torchvision.datasets.CIFAR10(root='./data/cifar10', train=False,
-                                              download=True, transforms = test_transform)
+                                              download=True, transform = test_transform)
 
         X_train = trainset.data
         X_test = devset.data
@@ -115,9 +115,9 @@ def load_CIFAR_data(data_type="CIFAR10", label_mode="fine",
 
     elif data_type == "CIFAR100":
         trainset = torchvision.datasets.CIFAR100(root='./data/cifar100', train=True,
-                                                 download=True, transforms = train_transform)
+                                                 download=True, transform = train_transform)
         devset = torchvision.datasets.CIFAR100(root='./data/cifar100', train=False,
-                                               download=True, transforms = test_transform)
+                                               download=True, transform = test_transform)
         X_train = trainset.data
         X_test = devset.data
 

@@ -113,7 +113,7 @@ class FedMD_SIAs():
         test_dataset = (TensorDataset(torch.from_numpy(self.private_test_data["X"]).float(),
                                       torch.from_numpy(self.private_test_data["y"]).long()))
         collaboration_performance = {i: [] for i in range(self.N_parties)}
-        best_att_asr = 0
+        
         r = 0
         while True:
             # At beginning of each round, generate new alignment dataset
@@ -125,32 +125,6 @@ class FedMD_SIAs():
             print("round ", r)
 
             print("update logits ... ")
-            print("start source inference attacks:")
-            mimic_local_models = []
-
-            for index, d in enumerate(self.collaborative_parties):
-                train_dataset = (TensorDataset(torch.from_numpy(self.private_data[index]["X"]).float(),
-                                               torch.from_numpy(self.private_data[index]["y"]).long()))
-                student_model = copy.deepcopy(self.student_model)
-                logit_currently = get_logits(d["model"], alignment_dataloader, cuda=True)
-                public_dataloader = (TensorDataset(torch.from_numpy(alignment_data["X"]).float(),
-                                                   torch.from_numpy(logit_currently).float()))
-
-                student_model = train(student_model, public_dataloader, lr=0.001, epochs=30, cuda=True, batch_size=64,
-                                      loss_fn=nn.L1Loss(), weight_decay=0)
-                mimic_local_models.append(student_model)
-
-            SIAs = SIA(w_locals=mimic_local_models, dataset=self.source_data)
-            attack_ASR = SIAs.attack()
-
-            logger.append([self.alpha, r, attack_ASR])
-
-            if attack_ASR > best_att_asr:
-                for i, d in enumerate(self.collaborative_parties):
-                    file_name = self.model_saved_name[i] + ".h5"
-                    torch.save(d["model"].state_dict(), os.path.join(self.checkpoint, file_name))
-
-            best_att_asr = max(best_att_asr, attack_ASR)
 
             # update logits
             logits = 0
