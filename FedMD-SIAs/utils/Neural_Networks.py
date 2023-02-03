@@ -324,11 +324,11 @@ class cnn_2layer_fc_model_mnist(nn.Module):
 
 # ************************** training function **************************
 def train_epoch(model, data_loader, cuda=True, lr=0.001,batch_size=128,loss_fn = nn.CrossEntropyLoss(),weight_decay=1e-3, name = 'model_name', epochs = 25):
-    if name == 'RESNET20':
-        optim = SGD(model.parameters(), lr=0.1)
-        scheduler = optim.lr_scheduler.CosineAnnealingLR(optim, T_max=epochs, eta_min=0.00001)
-    else:
-        optim = Adam(model.parameters(), lr=lr,weight_decay=weight_decay)
+    # if name == 'RESNET20':
+    #     optim = SGD(model.parameters(), lr=0.1)
+    #     scheduler = optim.lr_scheduler.CosineAnnealingLR(optim, T_max=epochs, eta_min=0.00001)
+    # else:
+    optim = Adam(model.parameters(), lr=lr,weight_decay=weight_decay)
 
     loss_fn = loss_fn
 
@@ -364,56 +364,25 @@ def train_epoch(model, data_loader, cuda=True, lr=0.001,batch_size=128,loss_fn =
             t.set_postfix(loss='{:05.3f}'.format(loss_avg()))
             t.update()
 
-        if name == 'RESNET20':
-            scheduler.step()
+        # if name == 'RESNET20':
+        #     scheduler.step()
 
 def train(model, data_loader, epochs, cuda=True, lr=0.001,batch_size=128,loss_fn = nn.CrossEntropyLoss(),weight_decay=1e-3, name = 'model_name'):
-    if name == 'RESNET20':
-        optim = SGD(model.parameters(), lr=0.1, weight_decay=weight_decay)
-        scheduler = optim.lr_scheduler.CosineAnnealingLR(optim, T_max=epochs, eta_min=0.00001)
-    else:
-        optim = Adam(model.parameters(), lr=lr,weight_decay=weight_decay)
+    # if name == 'RESNET20':
+    #     optim = SGD(model.parameters(), lr=0.1, weight_decay=weight_decay)
+    #     scheduler = optim.lr_scheduler.CosineAnnealingLR(optim, T_max=epochs, eta_min=0.00001)
+    # else:
+    #     optim = Adam(model.parameters(), lr=lr,weight_decay=weight_decay)
 
-    loss_fn = loss_fn
+    # loss_fn = loss_fn
 
-    if cuda:
-        device = torch.device("cuda:0")
-        model.to(device)
+    # if cuda:
+    #     device = torch.device("cuda:0")
+    #     model.to(device)
     for epoch in range(epochs):
         # ********************* one full pass over the training set *********************
-        #train_epoch(model, data_loader, lr=lr,cuda=cuda, batch_size=batch_size,loss_fn = loss_fn,weight_decay=weight_decay, name = name, epochs = epochs)
-        
-
-        model.train()
-        loss_avg = RunningAverage()
-
-        data_loader=DataLoader(data_loader,batch_size=batch_size,shuffle=True)
-
-        with tqdm(total=len(data_loader),disable=True) as t:  # Use tqdm for progress bar
-
-            for i, (train_batch, labels_batch) in enumerate(data_loader):
-
-                if cuda:
-                    train_batch = train_batch.cuda()        # (B,3,32,32)
-                    labels_batch = labels_batch.cuda()      # (B,)
-
-                # compute model output and loss
-                output_batch = model(train_batch)           # logit without softmax
-                loss = loss_fn(output_batch, labels_batch)
-
-                optim.zero_grad()
-                loss.backward()
-                optim.step()
-
-                # update the average loss
-                loss_avg.update(loss.item())
-
-                # tqdm setting
-                t.set_postfix(loss='{:05.3f}'.format(loss_avg()))
-                t.update()
-
-        if name == 'RESNET20':
-            scheduler.step()   
+        train_epoch(model, data_loader, lr=lr,cuda=cuda, batch_size=batch_size,loss_fn = loss_fn,weight_decay=weight_decay, name = name, epochs = epochs)
+         
 
     return model
 
