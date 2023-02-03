@@ -9,7 +9,7 @@ from torch.utils.data import TensorDataset, DataLoader,Dataset
 from .utility import RunningAverage,set_logger
 import torch.nn.init as init
 
-from torch.optim import SGD, Adam
+from torch.optim import SGD, Adam, lr_scheduler
 import os
 
 
@@ -365,15 +365,17 @@ def train_epoch(model, data_loader, cuda=True, lr=0.001,batch_size=128,loss_fn =
 def train(model, data_loader, epochs, cuda=True, lr=0.001,batch_size=128,loss_fn = nn.CrossEntropyLoss(),weight_decay=1e-3, name = 'model_name'):
     if name == 'RESNET20':
         optim = SGD(model.parameters(), lr=0.1, weight_decay=weight_decay)
-        scheduler = optim.lr_scheduler.CosineAnnealingLR(optim, T_max=epochs, eta_min=0.00001)
+        scheduler = lr_scheduler.CosineAnnealingLR(optim, T_max=epochs, eta_min=0.00001)
     else:
         optim = Adam(model.parameters(), lr=lr,weight_decay=weight_decay)
 
     for epoch in range(epochs):
         # ********************* one full pass over the training set *********************
-        print('Starting epoch {}/{}, LR = {}'.format(epoch+1, epochs, scheduler.get_last_lr()))
+        if name == 'RESNET20':
+            print('Starting epoch {}/{}, LR = {}'.format(epoch+1, epochs, scheduler.get_last_lr()))
         train_epoch(model, data_loader, lr=lr,cuda=cuda, batch_size=batch_size,loss_fn = loss_fn,weight_decay=weight_decay, name = name, epochs = epochs, optim = optim)
-        scheduler.step()
+        if name == 'RESNET20':
+            scheduler.step()
 
     return model
 
