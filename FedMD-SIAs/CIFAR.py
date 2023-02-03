@@ -4,7 +4,7 @@ import sys
 import torch
 import numpy as np
 from torch.utils.data import TensorDataset
-from utils.data_utils import load_CIFAR_data, generate_partial_data, generate_dirc_private_dat
+from utils.data_utils import load_CIFAR_data, generate_partial_data, generate_dirc_private_data
 from FedMD_SIAs import FedMD_SIAs
 from utils.Neural_Networks import cnn_2layer_fc_model_cifar, cnn_3layer_fc_model_cifar, cifar_student, train_models, Resnet20, train_and_eval
 
@@ -126,10 +126,10 @@ if __name__ == "__main__":
         if model_saved_names[i] == 'RESNET20':
             model_A, train_acc, train_loss, val_acc, val_loss = train_and_eval(tmp, train_dataset,
                                                                                test_dataset, 20, batch_size=128, name = model_saved_names[i])
+            parties.append(model_A)
         else:
             tmp.load_state_dict(torch.load(os.path.join(pre_models_dir, "{}.h5".format(model_saved_names[i]))))
-
-        parties.append(tmp)
+            parties.append(tmp)
 
         del model_name, model_params, tmp
 

@@ -324,12 +324,8 @@ class cnn_2layer_fc_model_mnist(nn.Module):
         return out
 
 # ************************** training function **************************
-def train_epoch(model, data_loader, cuda=True, lr=0.001,batch_size=128,loss_fn = nn.CrossEntropyLoss(),weight_decay=1e-3, name = 'model_name', epochs = 25):
-    # if name == 'RESNET20':
-    #     optim = SGD(model.parameters(), lr=0.1)
-    #     scheduler = optim.lr_scheduler.CosineAnnealingLR(optim, T_max=epochs, eta_min=0.00001)
-    # else:
-    optim = Adam(model.parameters(), lr=lr,weight_decay=weight_decay)
+def train_epoch(model, data_loader, cuda=True, lr=0.001,batch_size=128,loss_fn = nn.CrossEntropyLoss(),weight_decay=1e-3, name = 'model_name', epochs = 25, optim = None ):
+    
 
     loss_fn = loss_fn
 
@@ -365,25 +361,19 @@ def train_epoch(model, data_loader, cuda=True, lr=0.001,batch_size=128,loss_fn =
             t.set_postfix(loss='{:05.3f}'.format(loss_avg()))
             t.update()
 
-        # if name == 'RESNET20':
-        #     scheduler.step()
 
 def train(model, data_loader, epochs, cuda=True, lr=0.001,batch_size=128,loss_fn = nn.CrossEntropyLoss(),weight_decay=1e-3, name = 'model_name'):
-    # if name == 'RESNET20':
-    #     optim = SGD(model.parameters(), lr=0.1, weight_decay=weight_decay)
-    #     scheduler = optim.lr_scheduler.CosineAnnealingLR(optim, T_max=epochs, eta_min=0.00001)
-    # else:
-    #     optim = Adam(model.parameters(), lr=lr,weight_decay=weight_decay)
+    if name == 'RESNET20':
+        optim = SGD(model.parameters(), lr=0.1, weight_decay=weight_decay)
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optim, T_max=epochs, eta_min=0.00001)
+    else:
+        optim = Adam(model.parameters(), lr=lr,weight_decay=weight_decay)
 
-    # loss_fn = loss_fn
-
-    # if cuda:
-    #     device = torch.device("cuda:0")
-    #     model.to(device)
     for epoch in range(epochs):
         # ********************* one full pass over the training set *********************
-        train_epoch(model, data_loader, lr=lr,cuda=cuda, batch_size=batch_size,loss_fn = loss_fn,weight_decay=weight_decay, name = name, epochs = epochs)
-         
+        print('Starting epoch {}/{}, LR = {}'.format(epoch+1, epochs, scheduler.get_last_lr()))
+        train_epoch(model, data_loader, lr=lr,cuda=cuda, batch_size=batch_size,loss_fn = loss_fn,weight_decay=weight_decay, name = name, epochs = epochs, optim = optim)
+        scheduler.step()
 
     return model
 
