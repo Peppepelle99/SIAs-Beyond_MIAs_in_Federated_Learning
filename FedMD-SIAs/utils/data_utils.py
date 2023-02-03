@@ -6,6 +6,7 @@ from collections import defaultdict
 import scipy.io as sio
 import torchvision
 import random
+import torchvision.transforms as transforms
 
 
 def normalization(x_img_train, x_img_test):
@@ -91,11 +92,20 @@ def load_EMNIST_data(file, verbose=False, standarized=False):
 
 def load_CIFAR_data(data_type="CIFAR10", label_mode="fine",
                     standarized=True, verbose=False):
+    train_transform = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5071, 0.4865, 0.4409), (0.2673, 0.2564, 0.2761)),
+                    ])
+    test_transform = transforms.Compose([
+        transforms.ToTensor()
+                    ])
     if data_type == "CIFAR10":
         trainset = torchvision.datasets.CIFAR10(root='./data/cifar10', train=True,
-                                                download=True)
+                                                download=True, transforms = train_transform)
         devset = torchvision.datasets.CIFAR10(root='./data/cifar10', train=False,
-                                              download=True)
+                                              download=True, transforms = test_transform)
 
         X_train = trainset.data
         X_test = devset.data
@@ -105,9 +115,9 @@ def load_CIFAR_data(data_type="CIFAR10", label_mode="fine",
 
     elif data_type == "CIFAR100":
         trainset = torchvision.datasets.CIFAR100(root='./data/cifar100', train=True,
-                                                 download=True)
+                                                 download=True, transforms = train_transform)
         devset = torchvision.datasets.CIFAR100(root='./data/cifar100', train=False,
-                                               download=True)
+                                               download=True, transforms = test_transform)
         X_train = trainset.data
         X_test = devset.data
 
