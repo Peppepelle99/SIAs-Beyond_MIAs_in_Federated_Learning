@@ -11,6 +11,112 @@ from .utility import RunningAverage,set_logger
 from torch.optim import SGD, Adam
 import os
 
+
+
+NUM_GROUP = 8
+# GroupNorm takes number of groups to divide the channels in and the number of channels to expect
+# in the input. 
+
+def _weights_init(m):
+    classname = m.__class__.__name__
+    #print(classname)
+    if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
+        init.kaiming_normal_(m.weight)
+
+class BasicBlock(nn.Module):
+    expansion = 1
+
+    def __init__(self, in_planes, planes, stride=1):
+        super(BasicBlock, self).__init__()
+    
+        self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.gn1 = nn.GroupNorm(NUM_GROUP, planes)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
+        self.gn2 = nn.GroupNorm(NUM_GROUP, planes)
+
+        self.shortcut = nn.Sequential()
+        if stride != 1 or in_planes != planes:
+            self.shortcut = nn.Sequential(
+                  nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=stride, bias=False),
+                  nn.GroupNorm(NUM_GROUP, self.expansion * planes)  )
+          
+        self.relu = nn.ReLU()
+        self.stride = stride
+
+    def forward(self, x):
+        out = self.conv1(x)
+        out = self.gn1(out)
+        out = self.relu(out)
+        out = self.conv2(out)
+        out = self.gn2(out)
+        out += self.shortcut(x)
+        out = self.relu(out)
+        return out
+
+
+
+class Resnet20(nn.Module):
+    """implementation of ResNet20 with GN layers"""
+    def __init__(self, lr, device, n_classes, input_shape = (28,28)):
+    #def __init__(self, num_classes=100):
+      super(Resnet20, self).__init__()
+      block = BasicBlock
+      num_blocks = [3,3,3]
+      self.num_classes = n_classes
+      self.device = device
+      self.lr = lr
+      self.in_planes = 16
+      self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
+      self.gn1 = nn.GroupNorm(NUM_GROUP, 16)
+      self.relu = nn.ReLU()
+      
+      self.layer1 = self._make_layer(block, 16, num_blocks[0], stride=1)
+      self.layer2 = self._make_layer(block, 32, num_blocks[1], stride=2)
+      self.layer3 = self._make_layer(block, 64, num_blocks[2], stride=2)
+      self.linear = nn.Linear(64, n_classes)
+
+      self.apply(_weights_init)
+      #self.weights = self.apply(_weights_init)
+      self.size = self.model_size()
+      print(f"size definito {self.size}")
+
+    def _make_layer(self, block, planes, num_blocks, stride):
+        strides = [stride] + [1]*(num_blocks-1)
+        layers = []
+        for stride in strides:
+            layers.append(block(self.in_planes, planes, stride))
+            self.in_planes = planes * block.expansion
+
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        out = self.conv1(x)
+        out = self.gn1(out)
+        out = self.relu(out)
+        
+        out = self.layer1(out)
+        out = self.layer2(out)
+        out = self.layer3(out)
+
+        out = torch.nn.functional.avg_pool2d(out, out.size()[3])
+        out = out.view(out.size(0), -1)
+        try:
+            out = self.linear(out)
+        except:
+            out = out
+            
+        return out
+      
+    def model_size(self):
+        tot_size = 0
+        for param in self.parameters():
+            tot_size += param.size()[0]
+        return tot_size
+        
+    def summary(self):
+        return "summary"
+
+
 class CNN(nn.Module):
     """Basic Pytorch CNN implementation"""
 
@@ -217,9 +323,13 @@ class cnn_2layer_fc_model_mnist(nn.Module):
         return out
 
 # ************************** training function **************************
-def train_epoch(model, data_loader, cuda=True, lr=0.001,batch_size=128,loss_fn = nn.CrossEntropyLoss(),weight_decay=1e-3):
-    optim = Adam(model.parameters(), lr=lr,weight_decay=weight_decay)
-    # optim = SGD(model.parameters(), lr=0.001)
+def train_epoch(model, data_loader, cuda=True, lr=0.001,batch_size=128,loss_fn = nn.CrossEntropyLoss(),weight_decay=1e-3, name = 'model_name', epochs = 25):
+    if name == 'RESNET20':
+        optim = SGD(model.parameters(), lr=0.1)
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optim, T_max=epochs, eta_min=0.00001)
+    else:
+        optim = Adam(model.parameters(), lr=lr,weight_decay=weight_decay)
+
     loss_fn = loss_fn
 
     if cuda:
@@ -254,10 +364,57 @@ def train_epoch(model, data_loader, cuda=True, lr=0.001,batch_size=128,loss_fn =
             t.set_postfix(loss='{:05.3f}'.format(loss_avg()))
             t.update()
 
-def train(model, data_loader, epochs, cuda=True, lr=0.001,batch_size=128,loss_fn = nn.CrossEntropyLoss(),weight_decay=1e-3):
+        if name == 'RESNET20':
+            scheduler.step()
+
+def train(model, data_loader, epochs, cuda=True, lr=0.001,batch_size=128,loss_fn = nn.CrossEntropyLoss(),weight_decay=1e-3, name = 'model_name'):
+    if name == 'RESNET20':
+        optim = SGD(model.parameters(), lr=0.1, weight_decay=weight_decay)
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optim, T_max=epochs, eta_min=0.00001)
+    else:
+        optim = Adam(model.parameters(), lr=lr,weight_decay=weight_decay)
+
+    loss_fn = loss_fn
+
+    if cuda:
+        device = torch.device("cuda:0")
+        model.to(device)
     for epoch in range(epochs):
         # ********************* one full pass over the training set *********************
-        train_epoch(model, data_loader, lr=lr,cuda=cuda, batch_size=batch_size,loss_fn = loss_fn,weight_decay=weight_decay)
+        #train_epoch(model, data_loader, lr=lr,cuda=cuda, batch_size=batch_size,loss_fn = loss_fn,weight_decay=weight_decay, name = name, epochs = epochs)
+        
+
+        model.train()
+        loss_avg = RunningAverage()
+
+        data_loader=DataLoader(data_loader,batch_size=batch_size,shuffle=True)
+
+        with tqdm(total=len(data_loader),disable=True) as t:  # Use tqdm for progress bar
+
+            for i, (train_batch, labels_batch) in enumerate(data_loader):
+
+                if cuda:
+                    train_batch = train_batch.cuda()        # (B,3,32,32)
+                    labels_batch = labels_batch.cuda()      # (B,)
+
+                # compute model output and loss
+                output_batch = model(train_batch)           # logit without softmax
+                loss = loss_fn(output_batch, labels_batch)
+
+                optim.zero_grad()
+                loss.backward()
+                optim.step()
+
+                # update the average loss
+                loss_avg.update(loss.item())
+
+                # tqdm setting
+                t.set_postfix(loss='{:05.3f}'.format(loss_avg()))
+                t.update()
+
+        if name == 'RESNET20':
+            scheduler.step()   
+
     return model
 
 def evaluate(model, data_loader, cuda=True):
@@ -292,10 +449,10 @@ def evaluate(model, data_loader, cuda=True):
     metrics_mean = {metric: np.mean([x[metric] for x in summ]) for metric in summ[0]}
     return metrics_mean
 
-def train_and_eval(model, train_loader, dev_loader, num_epochs,batch_size,lr=0.001,weight_decay=0.001):
+def train_and_eval(model, train_loader, dev_loader, num_epochs,batch_size,lr=0.001,weight_decay=0.001, name = 'model_name'):
 
 
-    model_trained=train(model,train_loader,epochs=num_epochs,lr=lr,batch_size=batch_size,weight_decay=weight_decay)
+    model_trained=train(model,train_loader,epochs=num_epochs,lr=lr,batch_size=batch_size,weight_decay=weight_decay, name = name)
 
     # ********************* Evaluate for one epoch on training and validation set *********************
     val_metrics = evaluate(model_trained, dev_loader, cuda=True)     # {'acc':acc, 'loss':loss}

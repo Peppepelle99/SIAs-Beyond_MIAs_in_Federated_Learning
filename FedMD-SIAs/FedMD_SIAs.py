@@ -47,7 +47,8 @@ class FedMD_SIAs():
                  checkpoint,
                  model_saved_name,
                  N_logits_matching_round, logits_matching_batchsize,
-                 N_private_training_round, private_training_batchsize):
+                 N_private_training_round, private_training_batchsize,
+                 names):
         self.student_model = s_model
         self.alpha = alpha
         self.N_parties = len(parties)
@@ -84,7 +85,7 @@ class FedMD_SIAs():
                                            torch.from_numpy(private_data[i]["y"]).long()))
 
             model_A, train_acc, train_loss, val_acc, val_loss = train_and_eval(model_A_twin, train_dataset,
-                                                                               test_dataset, 25, batch_size=32)
+                                                                               test_dataset, 25, batch_size=32, name = names[i])
 
             print("full stack training done")
 

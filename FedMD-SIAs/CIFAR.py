@@ -6,7 +6,7 @@ import numpy as np
 from torch.utils.data import TensorDataset
 from utils.data_utils import load_CIFAR_data, generate_partial_data, generate_dirc_private_data
 from FedMD_SIAs import FedMD_SIAs
-from utils.Neural_Networks import cnn_2layer_fc_model_cifar, cnn_3layer_fc_model_cifar, cifar_student, train_models
+from utils.Neural_Networks import cnn_2layer_fc_model_cifar, cnn_3layer_fc_model_cifar, cifar_student, train_models, Resnet20
 
 
 def parseArg():
@@ -26,7 +26,8 @@ def parseArg():
 
 
 CANDIDATE_MODELS = {"2_layer_CNN": cnn_2layer_fc_model_cifar,
-                    "3_layer_CNN": cnn_3layer_fc_model_cifar}
+                    "3_layer_CNN": cnn_3layer_fc_model_cifar,
+                    "resnet20": Resnet20}
 
 student_model = cifar_student
 
@@ -114,22 +115,7 @@ if __name__ == "__main__":
 
     pre_models_dir = "./pretrained_CIFAR10/"
     parties = []
-
-    # for i, item in enumerate(model_config):
-    #     model_name = item["model_type"]
-    #     model_params = item["params"]
-    #     tmp = CANDIDATE_MODELS[model_name](n_classes=n_classes,**model_params)
-    #     print("model {0} : {1}".format(i, model_saved_names[i]))
-    #     print(tmp)
-    #     parties.append(tmp)
-    #
-    #     del model_name, model_params, tmp
-    #     #END FOR LOOP
-    # pre_train_result = train_models(parties,train_dataset,test_dataset,num_epochs=n_epochs,save_dir = pre_models_dir, save_names = model_saved_names)
-
-    # In fedmd, each model is first trained on the public dataset, i.e., mnist dataset.
-    # To save the experiment time, we provide pre_trained local models in the the "./pretrained_MNIST/" folder
-    # If someone wants to conduct experiments from scratch, please use the above commented code to obtain the pretrained model
+    
 
     for i, item in enumerate(model_config):
         model_name = item["model_type"]
@@ -137,7 +123,7 @@ if __name__ == "__main__":
         tmp = CANDIDATE_MODELS[model_name](n_classes=n_classes, **model_params)
         print("model {0} : {1}".format(i, model_saved_names[i]))
         print(tmp)
-        tmp.load_state_dict(torch.load(os.path.join(pre_models_dir, "{}.h5".format(model_saved_names[i]))))
+        #tmp.load_state_dict(torch.load(os.path.join(pre_models_dir, "{}.h5".format(model_saved_names[i]))))
         parties.append(tmp)
 
         del model_name, model_params, tmp
@@ -164,7 +150,8 @@ if __name__ == "__main__":
                        N_logits_matching_round=N_logits_matching_round,
                        logits_matching_batchsize=logits_matching_batchsize,
                        N_private_training_round=N_private_training_round,
-                       private_training_batchsize=private_training_batchsize)
+                       private_training_batchsize=private_training_batchsize,
+                       names = model_saved_names)
 
     initialization_result = fedmd.init_result
 
