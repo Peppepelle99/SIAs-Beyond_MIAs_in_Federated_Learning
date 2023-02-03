@@ -25,7 +25,7 @@
     "private_classes": [0,2,20,63,71,82],
     "public_classes": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
     "is_show": False,
-    "N_rounds": 20,
+    "N_rounds": 2,
     "manualseed": 82,
     "checkpoint": "checkpoint/ablation_study/E5/alpha1/cifar10/seed5",
     "N_logits_matching_round": 1, 
